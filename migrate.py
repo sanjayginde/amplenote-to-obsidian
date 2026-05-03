@@ -20,7 +20,7 @@ import sys
 import urllib.parse
 import zipfile
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -33,6 +33,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class NoteRecord:
@@ -50,8 +51,8 @@ class NoteRecord:
 class MigrationContext:
     notes: list
     title_to_record: dict
-    attachment_map: dict          # zip_path (str) → dest Path
-    attachment_basenames: dict    # basename (str) → dest Path
+    attachment_map: dict  # zip_path (str) → dest Path
+    attachment_basenames: dict  # basename (str) → dest Path
     errors: list
     stats: Counter
     dry_run: bool
@@ -72,9 +73,7 @@ UUID_WIKI_RE = re.compile(
     r"\[\[([^\]|]+?)\s*\|?\s*[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\]\]"
 )
 
-UUID_LINK_RE = re.compile(
-    r"\[([^\]]+)\]\(amplenote://[a-f0-9\-]+(?:#[^\)]*)?\)"
-)
+UUID_LINK_RE = re.compile(r"\[([^\]]+)\]\(amplenote://[a-f0-9\-]+(?:#[^\)]*)?\)")
 
 AMENTION_AT_RE = re.compile(r"@")  # used only in inspect mode to count occurrences
 
@@ -90,6 +89,7 @@ IMAGE_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
 # Frontmatter parsing
 # ---------------------------------------------------------------------------
 
+
 def parse_frontmatter(raw: str) -> tuple[dict, str]:
     m = FRONTMATTER_RE.match(raw)
     if not m:
@@ -100,7 +100,7 @@ def parse_frontmatter(raw: str) -> tuple[dict, str]:
             fm = {}
     except yaml.YAMLError:
         fm = {}
-    body = raw[m.end():]
+    body = raw[m.end() :]
     return fm, body
 
 
@@ -108,9 +108,10 @@ def parse_frontmatter(raw: str) -> tuple[dict, str]:
 # Tag normalization
 # ---------------------------------------------------------------------------
 
+
 def normalize_tags(tags) -> list:
     result = []
-    for tag in (tags or []):
+    for tag in tags or []:
         tag = str(tag).strip()
         tag = tag.lstrip("#")
         tag = re.sub(r"\s+", "-", tag)
@@ -123,6 +124,7 @@ def normalize_tags(tags) -> list:
 # ---------------------------------------------------------------------------
 # Date parsing
 # ---------------------------------------------------------------------------
+
 
 def parse_creation_date(val) -> "float | None":
     if val is None:
@@ -142,6 +144,7 @@ def parse_creation_date(val) -> "float | None":
 # ---------------------------------------------------------------------------
 # Filename / path helpers
 # ---------------------------------------------------------------------------
+
 
 def sanitize_filename(name: str) -> str:
     name = re.sub(r'[<>:"/\\|?*\x00-\x1f\[\]]', "-", name)
@@ -178,6 +181,7 @@ def determine_output_path(record: NoteRecord, ctx: MigrationContext) -> Path:
 # Deduplication of output paths
 # ---------------------------------------------------------------------------
 
+
 def assign_output_paths(notes: list, ctx: MigrationContext):
     seen: dict[Path, int] = {}
     for record in notes:
@@ -194,6 +198,7 @@ def assign_output_paths(notes: list, ctx: MigrationContext):
 # ---------------------------------------------------------------------------
 # Link resolution
 # ---------------------------------------------------------------------------
+
 
 def resolve_title(raw_title: str, ctx: MigrationContext) -> str:
     raw_title = raw_title.strip()
@@ -222,7 +227,9 @@ def apply_outside_code(text: str, fn) -> str:
     return "".join(result)
 
 
-def convert_amentions(text: str, sorted_titles: list, ctx: MigrationContext, count: list) -> str:
+def convert_amentions(
+    text: str, sorted_titles: list, ctx: MigrationContext, count: list
+) -> str:
     """Replace @Title with [[Title]] using known note titles (longest-match first)."""
     result = []
     i = 0
@@ -237,7 +244,7 @@ def convert_amentions(text: str, sorted_titles: list, ctx: MigrationContext, cou
             i += 1
             continue
         matched = False
-        rest = text[i + 1:]
+        rest = text[i + 1 :]
         for title in sorted_titles:
             if rest.lower().startswith(title.lower()):
                 end_pos = i + 1 + len(title)
@@ -258,6 +265,7 @@ def convert_amentions(text: str, sorted_titles: list, ctx: MigrationContext, cou
 # ---------------------------------------------------------------------------
 # Transformations
 # ---------------------------------------------------------------------------
+
 
 def transform_links(body: str, ctx: MigrationContext) -> tuple[str, int]:
     count = [0]
@@ -323,6 +331,7 @@ def transform_image_refs(
 # ---------------------------------------------------------------------------
 # Indexing
 # ---------------------------------------------------------------------------
+
 
 def build_index(zf: zipfile.ZipFile, ctx: MigrationContext):
     title_counter: dict[str, int] = {}
@@ -398,6 +407,7 @@ def build_attachment_map(zf: zipfile.ZipFile, ctx: MigrationContext):
 # Inspect mode
 # ---------------------------------------------------------------------------
 
+
 def inspect_and_report(ctx: MigrationContext, zf: zipfile.ZipFile):
     print("\n=== AMPLENOTE EXPORT INSPECTION ===\n")
     print(f"Notes found:       {len(ctx.notes)}")
@@ -434,9 +444,7 @@ def inspect_and_report(ctx: MigrationContext, zf: zipfile.ZipFile):
         if task_lines:
             task_notes += 1
             task_total += len(task_lines)
-            task_with_meta += sum(
-                1 for l in task_lines if "<!-- " in l
-            )
+            task_with_meta += sum(1 for line in task_lines if "<!-- " in line)
 
         for tag in record.tags:
             all_tags[tag] += 1
@@ -455,28 +463,28 @@ def inspect_and_report(ctx: MigrationContext, zf: zipfile.ZipFile):
         for src in missing:
             missing_images.append((record.title, src))
 
-    print(f"\n--- Link Formats ---")
+    print("\n--- Link Formats ---")
     print(f"  @mention style:    {mention_count} in {mention_notes} notes")
     print(f"  [[wiki-link]]:     {wiki_count} in {wiki_notes} notes")
     print(f"  UUID-URI style:    {uuid_uri_count} in {uuid_uri_notes} notes")
 
-    print(f"\n--- Tag Summary ---")
+    print("\n--- Tag Summary ---")
     print(f"  Unique tags: {len(all_tags)}")
     top = all_tags.most_common(10)
     if top:
         print("  Top tags: " + ", ".join(f"{t} ({n})" for t, n in top))
 
-    print(f"\n--- Notebook Structure ---")
+    print("\n--- Notebook Structure ---")
     for nb, count in notebooks.most_common():
         print(f"  {nb}: {count} notes")
 
-    print(f"\n--- Task Summary ---")
+    print("\n--- Task Summary ---")
     print(f"  Notes with tasks:  {task_notes}")
     print(f"  Total tasks:       {task_total}")
     print(f"  With HTML metadata:{task_with_meta}")
 
     if duplicate_titles or missing_images:
-        print(f"\n--- Potential Issues ---")
+        print("\n--- Potential Issues ---")
         if duplicate_titles:
             print(f"  Duplicate titles ({len(duplicate_titles)}):")
             for title, n in list(duplicate_titles.items())[:10]:
@@ -493,12 +501,15 @@ def inspect_and_report(ctx: MigrationContext, zf: zipfile.ZipFile):
 # Write phase
 # ---------------------------------------------------------------------------
 
+
 def content_hash(text: str) -> str:
     return hashlib.md5(text.encode("utf-8")).hexdigest()
 
 
 def write_note(record: NoteRecord, new_body: str, new_fm: dict, ctx: MigrationContext):
-    fm_text = yaml.dump(new_fm, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    fm_text = yaml.dump(
+        new_fm, allow_unicode=True, default_flow_style=False, sort_keys=False
+    )
     content = f"---\n{fm_text}---\n\n{new_body}"
 
     if ctx.dry_run:
@@ -506,6 +517,8 @@ def write_note(record: NoteRecord, new_body: str, new_fm: dict, ctx: MigrationCo
         return
 
     output_path = record.output_path
+    if output_path is None:
+        raise ValueError(f"Note '{record.title}' has no output_path assigned")
     if output_path.exists():
         existing = output_path.read_text(encoding="utf-8")
         if content_hash(existing) == content_hash(content):
@@ -543,7 +556,9 @@ def restore_timestamps(records: list, dry_run: bool):
         if record.creation_ts and record.output_path and record.output_path.exists():
             if not dry_run:
                 try:
-                    os.utime(record.output_path, (record.creation_ts, record.creation_ts))
+                    os.utime(
+                        record.output_path, (record.creation_ts, record.creation_ts)
+                    )
                 except Exception:
                     pass
 
@@ -551,6 +566,7 @@ def restore_timestamps(records: list, dry_run: bool):
 # ---------------------------------------------------------------------------
 # Main migration loop
 # ---------------------------------------------------------------------------
+
 
 def run_migration(ctx: MigrationContext, zf: zipfile.ZipFile):
     total = len(ctx.notes)
@@ -571,7 +587,9 @@ def run_migration(ctx: MigrationContext, zf: zipfile.ZipFile):
             for key in ("creation", "notebook", "folder", "source_folder"):
                 new_fm.pop(key, None)
             if record.creation_ts:
-                new_fm["created"] = datetime.fromtimestamp(record.creation_ts).isoformat()
+                new_fm["created"] = datetime.fromtimestamp(
+                    record.creation_ts
+                ).isoformat()
             new_fm["migrated_from"] = "amplenote"
 
             ctx.stats["links_converted"] += links_conv
@@ -598,6 +616,7 @@ def run_migration(ctx: MigrationContext, zf: zipfile.ZipFile):
 # Summary
 # ---------------------------------------------------------------------------
 
+
 def print_summary(ctx: MigrationContext):
     s = ctx.stats
     print("\n=== MIGRATION COMPLETE ===\n")
@@ -608,7 +627,9 @@ def print_summary(ctx: MigrationContext):
         print(f"Notes failed:       {s['notes_failed']}")
     print(f"Links converted:    {s['links_converted']}")
     if s["ambiguous_links"]:
-        print(f"Ambiguous links:    {s['ambiguous_links']}  (kept as-is, review in Obsidian)")
+        print(
+            f"Ambiguous links:    {s['ambiguous_links']}  (kept as-is, review in Obsidian)"
+        )
     if s["unresolved_links"]:
         print(f"Unresolved links:   {s['unresolved_links']}  (no matching note found)")
     print(f"Tasks cleaned:      {s['tasks_cleaned']}")
@@ -637,6 +658,7 @@ def print_summary(ctx: MigrationContext):
 # Self-test
 # ---------------------------------------------------------------------------
 
+
 def self_test():
     failures = []
 
@@ -660,7 +682,9 @@ def self_test():
     check("frontmatter/absent-body", body2, "No frontmatter here.")
 
     # normalize_tags
-    check("tags/strip-hash", normalize_tags(["#work", "personal"]), ["work", "personal"])
+    check(
+        "tags/strip-hash", normalize_tags(["#work", "personal"]), ["work", "personal"]
+    )
     check("tags/spaces", normalize_tags(["my tag"]), ["my-tag"])
     check("tags/hierarchy", normalize_tags(["project/work"]), ["project/work"])
     check("tags/empty", normalize_tags([]), [])
@@ -675,12 +699,12 @@ def self_test():
     check("date/none", parse_creation_date(None), None)
 
     # transform_tasks
-    task_body = "- [x] Do something <!-- uuid=\"abc\" completed=\"2024-01-01\" -->"
+    task_body = '- [x] Do something <!-- uuid="abc" completed="2024-01-01" -->'
     cleaned, count = transform_tasks(task_body)
     check("tasks/strip-meta", cleaned, "- [x] Do something")
     check("tasks/count", count, 1)
 
-    task_body2 = "- [ ] Not done\n- [x] Done <!-- uuid=\"xyz\" -->"
+    task_body2 = '- [ ] Not done\n- [x] Done <!-- uuid="xyz" -->'
     cleaned2, count2 = transform_tasks(task_body2)
     check("tasks/mixed", "<!-- uuid" not in cleaned2, True)
     check("tasks/count2", count2, 1)
@@ -735,12 +759,13 @@ def self_test():
         print(f"\n{len(failures)} test(s) FAILED")
         sys.exit(1)
     else:
-        print(f"All tests passed.")
+        print("All tests passed.")
 
 
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -750,24 +775,27 @@ def main():
     parser.add_argument("--input", help="Path to amplenote_export.zip")
     parser.add_argument("--output", help="Output directory for Obsidian vault")
     parser.add_argument(
-        "--inspect", action="store_true",
-        help="Analyze the export and print a report, then exit (no files written)"
+        "--inspect",
+        action="store_true",
+        help="Analyze the export and print a report, then exit (no files written)",
     )
     parser.add_argument(
-        "--dry-run", action="store_true",
-        help="Report what would be done without writing any files"
+        "--dry-run",
+        action="store_true",
+        help="Report what would be done without writing any files",
     )
     parser.add_argument(
-        "--no-subfolders", action="store_true",
-        help="Place all notes in the vault root instead of notebook subfolders"
+        "--no-subfolders",
+        action="store_true",
+        help="Place all notes in the vault root instead of notebook subfolders",
     )
     parser.add_argument(
-        "--attachments-dir", default="attachments",
-        help="Name of the attachments subfolder (default: attachments)"
+        "--attachments-dir",
+        default="attachments",
+        help="Name of the attachments subfolder (default: attachments)",
     )
     parser.add_argument(
-        "--self-test", action="store_true",
-        help="Run built-in unit tests and exit"
+        "--self-test", action="store_true", help="Run built-in unit tests and exit"
     )
     args = parser.parse_args()
 
